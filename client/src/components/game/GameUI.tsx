@@ -1,3 +1,4 @@
+import { useState, useRef } from "react";
 import { useRollerCoaster } from "@/lib/stores/useRollerCoaster";
 import { Button } from "@/components/ui/button";
 
@@ -9,7 +10,6 @@ export function GameUI() {
     stopRide,
     clearTrack,
     rideProgress,
-    isRiding,
     selectedPointId,
     removeTrackPoint,
     rideSpeed,
@@ -22,83 +22,119 @@ export function GameUI() {
     setHasChainLift,
   } = useRollerCoaster();
   
+  const [position, setPosition] = useState({ x: 8, y: 8 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragOffset = useRef({ x: 0, y: 0 });
+  
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('button, input')) return;
+    setIsDragging(true);
+    dragOffset.current = {
+      x: e.clientX - position.x,
+      y: e.clientY - position.y,
+    };
+  };
+  
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    setPosition({
+      x: e.clientX - dragOffset.current.x,
+      y: e.clientY - dragOffset.current.y,
+    });
+  };
+  
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+  
   const canRide = trackPoints.length >= 2;
   
   return (
-    <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
-      <div className="absolute top-4 left-4 pointer-events-auto bg-black/70 p-4 rounded-lg text-white max-w-xs">
-        <h1 className="text-xl font-bold mb-2">Roller Coaster Builder</h1>
+    <div 
+      className="absolute top-0 left-0 w-full h-full pointer-events-none"
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+    >
+      <div 
+        className="absolute pointer-events-auto bg-black/80 p-2 rounded-lg text-white text-xs cursor-move select-none"
+        style={{ left: position.x, top: position.y, maxWidth: '180px' }}
+        onMouseDown={handleMouseDown}
+      >
+        <h1 className="text-sm font-bold mb-1">Coaster Builder</h1>
         
         {mode === "build" && (
           <>
-            <p className="text-sm text-gray-300 mb-3">
-              {isAddingPoints 
-                ? "Click on the ground to place track points. Drag up/down before releasing to set height."
-                : "View/Edit mode: Pan around and adjust existing points. Click points to select and move them."}
-            </p>
-            <p className="text-sm text-gray-400 mb-2">
-              Points: {trackPoints.length}
+            <p className="text-gray-400 mb-1 text-[10px]">
+              Pts: {trackPoints.length} | Drag menu to move
             </p>
             
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1">
               <Button
+                size="sm"
                 onClick={() => setIsAddingPoints(!isAddingPoints)}
-                className={isAddingPoints 
+                className={`h-6 text-[10px] px-2 ${isAddingPoints 
                   ? "bg-blue-600 hover:bg-blue-700" 
-                  : "bg-gray-600 hover:bg-gray-700"}
+                  : "bg-gray-600 hover:bg-gray-700"}`}
               >
-                {isAddingPoints ? "Adding Points (ON)" : "Adding Points (OFF)"}
+                {isAddingPoints ? "Add Pts ON" : "Add Pts OFF"}
               </Button>
               
               <Button
+                size="sm"
                 onClick={() => setIsLooped(!isLooped)}
                 disabled={trackPoints.length < 3}
-                className={isLooped 
+                className={`h-6 text-[10px] px-2 ${isLooped 
                   ? "bg-purple-600 hover:bg-purple-700" 
-                  : "bg-gray-600 hover:bg-gray-700"}
+                  : "bg-gray-600 hover:bg-gray-700"}`}
               >
-                {isLooped ? "Loop Track (ON)" : "Loop Track (OFF)"}
+                {isLooped ? "Loop ON" : "Loop OFF"}
               </Button>
               
               <Button
+                size="sm"
                 onClick={() => setHasChainLift(!hasChainLift)}
-                className={hasChainLift 
+                className={`h-6 text-[10px] px-2 ${hasChainLift 
                   ? "bg-yellow-600 hover:bg-yellow-700" 
-                  : "bg-gray-600 hover:bg-gray-700"}
+                  : "bg-gray-600 hover:bg-gray-700"}`}
               >
-                {hasChainLift ? "Chain Lift (ON)" : "Chain Lift (OFF)"}
+                {hasChainLift ? "Chain ON" : "Chain OFF"}
               </Button>
               
               <Button
+                size="sm"
                 onClick={startRide}
                 disabled={!canRide}
-                className="bg-green-600 hover:bg-green-700"
+                className="h-6 text-[10px] px-2 bg-green-600 hover:bg-green-700"
               >
-                Start Ride
+                Ride
               </Button>
               
               <Button
+                size="sm"
                 onClick={clearTrack}
                 variant="destructive"
                 disabled={trackPoints.length === 0}
+                className="h-6 text-[10px] px-2"
               >
-                Clear Track
+                Clear
               </Button>
               
               {selectedPointId && (
                 <Button
+                  size="sm"
                   onClick={() => removeTrackPoint(selectedPointId)}
                   variant="outline"
-                  className="border-red-500 text-red-500 hover:bg-red-500/20"
+                  className="h-6 text-[10px] px-2 border-red-500 text-red-500 hover:bg-red-500/20"
                 >
-                  Delete Selected Point
+                  Delete Pt
                 </Button>
               )}
             </div>
             
-            <div className="mt-4">
-              <label className="text-sm text-gray-300 block mb-1">
-                Ride Speed: {rideSpeed.toFixed(1)}
+            <div className="mt-2">
+              <label className="text-[10px] text-gray-400 block">
+                Speed: {rideSpeed.toFixed(1)}
               </label>
               <input
                 type="range"
@@ -107,7 +143,7 @@ export function GameUI() {
                 step="0.25"
                 value={rideSpeed}
                 onChange={(e) => setRideSpeed(parseFloat(e.target.value))}
-                className="w-full"
+                className="w-full h-2"
               />
             </div>
           </>
@@ -115,53 +151,27 @@ export function GameUI() {
         
         {mode === "ride" && (
           <>
-            <p className="text-sm text-gray-300 mb-3">
-              Enjoy the ride!
-            </p>
-            
-            <div className="mb-3">
-              <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+            <div className="mb-2">
+              <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-green-500 transition-all duration-100"
                   style={{ width: `${rideProgress * 100}%` }}
                 />
               </div>
-              <p className="text-xs text-gray-400 mt-1">
-                Progress: {Math.round(rideProgress * 100)}%
+              <p className="text-[10px] text-gray-400 mt-0.5">
+                {Math.round(rideProgress * 100)}%
               </p>
             </div>
             
             <Button
+              size="sm"
               onClick={stopRide}
               variant="outline"
-              className="border-white text-white hover:bg-white/20"
+              className="h-6 text-[10px] px-2 border-white text-white hover:bg-white/20 w-full"
             >
-              Exit Ride
+              Exit
             </Button>
           </>
-        )}
-      </div>
-      
-      <div className="absolute bottom-4 left-4 pointer-events-auto bg-black/70 p-3 rounded-lg text-white text-sm">
-        <h3 className="font-semibold mb-1">Controls:</h3>
-        {mode === "build" ? (
-          <ul className="text-gray-300 text-xs space-y-1">
-            {isAddingPoints ? (
-              <>
-                <li>• Click ground to place points</li>
-                <li>• Drag while clicking to set height</li>
-              </>
-            ) : (
-              <>
-                <li>• Click + drag to orbit camera</li>
-                <li>• Scroll to zoom</li>
-              </>
-            )}
-            <li>• Click points to select</li>
-            <li>• Use arrows to move selected point</li>
-          </ul>
-        ) : (
-          <p className="text-gray-300 text-xs">Sit back and enjoy!</p>
         )}
       </div>
     </div>
