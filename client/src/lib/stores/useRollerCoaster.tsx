@@ -22,8 +22,10 @@ interface RollerCoasterState {
   hasChainLift: boolean;
   showWoodSupports: boolean;
   isNightMode: boolean;
+  cameraTarget: THREE.Vector3 | null;
   
   setMode: (mode: CoasterMode) => void;
+  setCameraTarget: (target: THREE.Vector3 | null) => void;
   addTrackPoint: (position: THREE.Vector3) => void;
   updateTrackPoint: (id: string, position: THREE.Vector3) => void;
   updateTrackPointTilt: (id: string, tilt: number) => void;
@@ -59,8 +61,11 @@ export const useRollerCoaster = create<RollerCoasterState>((set, get) => ({
   hasChainLift: true,
   showWoodSupports: false,
   isNightMode: false,
+  cameraTarget: null,
   
   setMode: (mode) => set({ mode }),
+  
+  setCameraTarget: (target) => set({ cameraTarget: target }),
   
   setIsDraggingPoint: (dragging) => set({ isDraggingPoint: dragging }),
   

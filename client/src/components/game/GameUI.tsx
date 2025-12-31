@@ -25,6 +25,7 @@ export function GameUI() {
     isNightMode,
     setIsNightMode,
     createLoopAtPoint,
+    setCameraTarget,
   } = useRollerCoaster();
   
   const [position, setPosition] = useState({ x: 8, y: 8 });
@@ -148,6 +149,17 @@ export function GameUI() {
               
               {selectedPointId && (
                 <>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      const point = trackPoints.find(p => p.id === selectedPointId);
+                      if (point) setCameraTarget(point.position.clone());
+                    }}
+                    className="h-6 text-[10px] px-2 bg-cyan-600 hover:bg-cyan-700"
+                  >
+                    Focus
+                  </Button>
+                  
                   <Button
                     size="sm"
                     onClick={() => createLoopAtPoint(selectedPointId)}
