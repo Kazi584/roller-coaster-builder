@@ -163,9 +163,8 @@ export const useRollerCoaster = create<RollerCoasterState>((set, get) => ({
       const entryPos = incomingPoints[incomingPoints.length - 1].position.clone();
       const exitPos = outgoingPoints[0].position.clone();
       
-      // STEP 3: Create loop points bridging from left entry to right exit
-      // Loop is in vertical plane perpendicular to the left vector
-      // Entry is on left, exit is on right, loop goes up and over
+      // STEP 3: Create loop arc directly connecting entry to exit
+      // Loop is in vertical plane, entry on left, exit on right
       const loopPoints: TrackPoint[] = [];
       
       // Center of loop is midway between entry and exit, at loopRadius height
@@ -173,51 +172,27 @@ export const useRollerCoaster = create<RollerCoasterState>((set, get) => ({
       const loopCenterY = entryPos.y + loopRadius;
       const loopCenterZ = (entryPos.z + exitPos.z) / 2;
       
-      // Lead-in: rise from entry toward loop
-      loopPoints.push({
-        id: `point-${++pointCounter}`,
-        position: new THREE.Vector3(
-          entryPos.x - left.x * 2,
-          entryPos.y + 3,
-          entryPos.z - left.z * 2
-        ),
-        tilt: 0
-      });
-      
-      // Loop goes from left (entry side) up over and down to right (exit side)
-      // Angle 0 = left side (entry), angle PI = right side (exit)
-      for (let i = 1; i < numLoopPoints; i++) {
-        const t = i / numLoopPoints;
-        const angle = t * Math.PI * 2; // Full circle starting from left
+      // Generate 8 evenly spaced points along the loop arc
+      // Start from entry (angle 0 = left/entry side), go up, over top, down to exit (angle 2PI)
+      const arcPoints = 8;
+      for (let i = 1; i < arcPoints; i++) {
+        const t = i / arcPoints;
+        const angle = t * Math.PI * 2;
         
-        // Left vector points from center to entry side
-        // -left points from center to exit side
-        const lateralPos = Math.cos(angle) * loopRadius; // positive = toward entry (left)
+        // cos(0) = 1 = entry side (left), cos(PI) = -1 = exit side (right)
+        const lateralPos = Math.cos(angle) * loopRadius;
         const heightPos = Math.sin(angle) * loopRadius;
-        
-        const pointPos = new THREE.Vector3(
-          loopCenterX + left.x * lateralPos,
-          loopCenterY + heightPos,
-          loopCenterZ + left.z * lateralPos
-        );
         
         loopPoints.push({
           id: `point-${++pointCounter}`,
-          position: pointPos,
+          position: new THREE.Vector3(
+            loopCenterX + left.x * lateralPos,
+            loopCenterY + heightPos,
+            loopCenterZ + left.z * lateralPos
+          ),
           tilt: 0
         });
       }
-      
-      // Lead-out: descend toward exit
-      loopPoints.push({
-        id: `point-${++pointCounter}`,
-        position: new THREE.Vector3(
-          exitPos.x + left.x * 2,
-          exitPos.y + 3,
-          exitPos.z + left.z * 2
-        ),
-        tilt: 0
-      });
       
       // Combine: shifted incoming + loop + shifted outgoing
       const newTrackPoints = [
