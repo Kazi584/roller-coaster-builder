@@ -182,32 +182,53 @@ export const useRollerCoaster = create<RollerCoasterState>((set, get) => ({
         });
       }
       
-      // Simple straight exit: just go forward from where the loop ends
-      // No lateral adjustment - let the user's next track point handle reconnection
+      // Tapered exit: blend from loop exit position to next original track point
       const loopExitPos = loopPoints[loopPoints.length - 1].position.clone();
-      const straightSpacing = 5;
-      const numStraightPoints = 3;
+      const nextOriginalPoint = state.trackPoints[pointIndex + 1];
       
       const straightExitPoints: TrackPoint[] = [];
-      for (let i = 1; i <= numStraightPoints; i++) {
-        straightExitPoints.push({
-          id: `point-${++pointCounter}`,
-          position: new THREE.Vector3(
-            loopExitPos.x + forward.x * straightSpacing * i,
-            entryPos.y,
-            loopExitPos.z + forward.z * straightSpacing * i
-          ),
-          tilt: 0
-        });
+      
+      if (nextOriginalPoint) {
+        // Create transition points that blend from loop exit to original next point
+        const numTransitionPoints = 4;
+        const targetPos = nextOriginalPoint.position.clone();
+        
+        for (let i = 1; i <= numTransitionPoints; i++) {
+          const t = i / (numTransitionPoints + 1); // 0.2, 0.4, 0.6, 0.8
+          
+          // Linear interpolation from loop exit to target
+          straightExitPoints.push({
+            id: `point-${++pointCounter}`,
+            position: new THREE.Vector3(
+              loopExitPos.x + (targetPos.x - loopExitPos.x) * t,
+              loopExitPos.y + (targetPos.y - loopExitPos.y) * t,
+              loopExitPos.z + (targetPos.z - loopExitPos.z) * t
+            ),
+            tilt: 0
+          });
+        }
+      } else {
+        // No next point - just go straight forward
+        const straightSpacing = 5;
+        for (let i = 1; i <= 3; i++) {
+          straightExitPoints.push({
+            id: `point-${++pointCounter}`,
+            position: new THREE.Vector3(
+              loopExitPos.x + forward.x * straightSpacing * i,
+              entryPos.y,
+              loopExitPos.z + forward.z * straightSpacing * i
+            ),
+            tilt: 0
+          });
+        }
       }
       
-      // IMPORTANT: Don't include original next points - they would create the hook
-      // User can add their own points after the loop exit
+      // Combine: keep ALL original points
       const newTrackPoints = [
         ...state.trackPoints.slice(0, pointIndex + 1),
         ...loopPoints,
-        ...straightExitPoints
-        // Deliberately NOT including: ...state.trackPoints.slice(pointIndex + 1)
+        ...straightExitPoints,
+        ...state.trackPoints.slice(pointIndex + 1)
       ];
       
       return { trackPoints: newTrackPoints };
