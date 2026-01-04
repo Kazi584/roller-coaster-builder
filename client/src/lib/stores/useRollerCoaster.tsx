@@ -257,66 +257,26 @@ export const useRollerCoaster = create<RollerCoasterState>((set, get) => ({
         .add(forward.clone().multiplyScalar(forwardSeparation))
         .add(right.clone().multiplyScalar(exitSeparation));
       
-      // === EXIT TRANSITION: Simple exit from the loop ===
-      // The loop's last point is offset laterally. Use offsetLoopExit as anchor, then blend to legacy track.
-      const transitionPoints: TrackPoint[] = [];
-      
-      // First transition point: the offset exit anchor (clears the entry track)
-      transitionPoints.push({
+      // === EXIT: Move the next legacy point horizontally to meet the loop exit ===
+      // No extra transition points - just move the legacy point's X/Z to match offsetLoopExit
+      const adjustedNextPoint: TrackPoint = {
+        ...nextPoint,
         id: `point-${++pointCounter}`,
-        position: offsetLoopExit.clone(),
-        tilt: 0
-      });
+        position: new THREE.Vector3(
+          offsetLoopExit.x,
+          nextPoint.position.y,
+          offsetLoopExit.z
+        )
+      };
       
-      // Target: the next legacy point after the one we're replacing
-      const targetPoint = nextPoint;
-      
-      if (targetPoint) {
-        const targetPos = targetPoint.position.clone();
-        
-        // Legacy direction: where the track was heading
-        const nextNextPoint = state.trackPoints[pointIndex + 2];
-        let legacyDir: THREE.Vector3;
-        if (nextNextPoint) {
-          legacyDir = nextNextPoint.position.clone().sub(targetPos).normalize();
-        } else {
-          legacyDir = targetPos.clone().sub(offsetLoopExit).normalize();
-        }
-        
-        // Single Hermite blend from offsetLoopExit to targetPos
-        const dist = offsetLoopExit.distanceTo(targetPos);
-        const scale = dist * 0.4;
-        
-        const t = 0.5;
-        const t2 = t * t;
-        const t3 = t2 * t;
-        const h00 = 2*t3 - 3*t2 + 1;
-        const h10 = t3 - 2*t2 + t;
-        const h01 = -2*t3 + 3*t2;
-        const h11 = t3 - t2;
-        
-        const blendPoint = new THREE.Vector3()
-          .addScaledVector(offsetLoopExit, h00)
-          .addScaledVector(forward, h10 * scale)
-          .addScaledVector(targetPos, h01)
-          .addScaledVector(legacyDir, h11 * scale);
-        
-        transitionPoints.push({
-          id: `point-${++pointCounter}`,
-          position: blendPoint,
-          tilt: 0
-        });
-      }
-      
-      // Combine: skip only the immediate next legacy point (the one at loop entry)
-      const skipCount = 1;
+      // Combine: all before entry + approach + entry + loop + adjusted legacy point + rest
       const newTrackPoints = [
         ...state.trackPoints.slice(0, pointIndex), // All points before entry
         ...approachPoints,                          // Smooth approach to entry
         entryPoint,                                 // The entry point itself
         ...loopPoints,                              // The loop
-        ...transitionPoints,                        // Smooth exit transition
-        ...state.trackPoints.slice(pointIndex + 1 + skipCount) // Skip entry and replaced legacy points
+        adjustedNextPoint,                          // Legacy point moved to meet loop exit
+        ...state.trackPoints.slice(pointIndex + 2) // Skip original entry point and next point
       ];
       
       return { trackPoints: newTrackPoints };
