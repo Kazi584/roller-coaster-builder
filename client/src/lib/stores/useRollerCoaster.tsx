@@ -151,8 +151,8 @@ export const useRollerCoaster = create<RollerCoasterState>((set, get) => ({
       // Get the next point early so we can target it for exit
       const nextPoint = state.trackPoints[pointIndex + 1];
       
-      // Build helical loop with symmetric corkscrew (ease-in/ease-out)
-      // Lateral offset peaks at mid-loop and returns to 0 at exit for straight hand-off
+      // Build helical loop with mild corkscrew
+      // Lateral offset increases linearly throughout to separate entry from exit
       for (let i = 1; i <= totalLoopPoints; i++) {
         const t = i / totalLoopPoints; // 0 to 1
         const theta = t * Math.PI * 2; // 0 to 2π
@@ -160,8 +160,8 @@ export const useRollerCoaster = create<RollerCoasterState>((set, get) => ({
         const forwardOffset = Math.sin(theta) * loopRadius;
         const verticalOffset = (1 - Math.cos(theta)) * loopRadius;
         
-        // Symmetric corkscrew: sin²(θ/2) peaks at θ=π and returns to 0 at θ=2π
-        const lateralOffset = helixSeparation * Math.pow(Math.sin(theta / 2), 2);
+        // Gradual corkscrew: linear lateral offset
+        const lateralOffset = t * helixSeparation;
         
         loopPoints.push({
           id: `point-${++pointCounter}`,
