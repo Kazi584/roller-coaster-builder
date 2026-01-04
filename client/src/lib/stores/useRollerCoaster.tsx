@@ -220,10 +220,10 @@ export const useRollerCoaster = create<RollerCoasterState>((set, get) => ({
         const forwardOffset = Math.sin(theta) * loopRadius;
         const verticalOffset = (1 - Math.cos(theta)) * loopRadius;
         
-        // Smoothstep corkscrew: eases in and out with zero derivative at start and end
-        // This ensures the spline tangent is purely forward at exit, preventing hooks
-        const smoothT = t * t * (3 - 2 * t); // smoothstep: 0 at t=0, 1 at t=1, zero derivative at both ends
-        const lateralOffset = smoothT * helixSeparation;
+        // Bump corkscrew: bulges out in the middle, returns to zero at exit
+        // sin²(πt) = 0 at t=0, peaks at t=0.5, returns to 0 at t=1, with zero derivative at both ends
+        const bump = Math.pow(Math.sin(Math.PI * t), 2);
+        const lateralOffset = bump * helixSeparation;
         
         loopPoints.push({
           id: `point-${++pointCounter}`,
@@ -244,23 +244,16 @@ export const useRollerCoaster = create<RollerCoasterState>((set, get) => ({
         });
       }
       
-      // === EXIT: Shift all downstream legacy points to align with loop exit ===
-      // The smoothstep ensures zero lateral derivative at exit, so spline will continue smoothly
-      const lateralShift = right.clone().multiplyScalar(helixSeparation);
+      // === EXIT: Loop returns to original centerline, no shifting needed ===
+      // The sin²(πt) bump ensures the loop exits at the same lateral position as entry
       
-      const shiftedLegacyPoints: TrackPoint[] = state.trackPoints.slice(pointIndex + 1).map((pt) => ({
-        ...pt,
-        id: `point-${++pointCounter}`,
-        position: pt.position.clone().add(lateralShift)
-      }));
-      
-      // Combine: all before entry + approach + entry + loop + shifted legacy points
+      // Combine: all before entry + approach + entry + loop + original legacy points
       const newTrackPoints = [
         ...state.trackPoints.slice(0, pointIndex), // All points before entry
         ...approachPoints,                          // Smooth approach to entry
         entryPoint,                                 // The entry point itself
-        ...loopPoints,                              // The loop (exits with zero lateral derivative)
-        ...shiftedLegacyPoints                      // Legacy points shifted to match loop exit
+        ...loopPoints,                              // The loop (exits at original centerline)
+        ...state.trackPoints.slice(pointIndex + 1) // Original legacy points unchanged
       ];
       
       return { trackPoints: newTrackPoints };
